@@ -64,8 +64,6 @@ std::pair<uInt, uInt> count_prime_variations(const uInt base, const std::vector<
   return std::make_pair(min_prime, max_count);
 }
 
-#include <algorithm>
-
 int main(void)
 {
   constexpr uInt VARIATION = 8;
