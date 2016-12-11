@@ -117,6 +117,26 @@ namespace PolygonalNumber
     return is_int<decltype(nf), Int_t>(nf);
   }
 
+
+  /**
+   * 与えた数が多角数のどれであるかを確認
+   * @param num  確認したい数
+   * @param skip 同時に複数の多角数に該当する場合，判定をスキップするためのパラメータ
+   *             ex) is_polygonal(num, 4);  // もしnumが三角数や四画数だとしてもそれらの判定は無視して五角数以降で判定を行う
+   * @return    numが3<=N<=8のN角数のときN，多角数ではないとき0
+   */
+  template <typename Int_t>
+  inline
+  Int_t is_polygonal(const Int_t num, const Int_t skip = 0)
+  {
+    if (skip < 3 && is_trianguler(num)) { return 3; }
+    if (skip < 4 && is_square(num)) { return 4; }
+    if (skip < 5 && is_pentagonal(num)) { return 5; }
+    if (skip < 6 && is_hexagonal(num)) { return 6; }
+    if (skip < 7 && is_heptagonal(num)) { return 7; }
+    if (skip < 8 && is_octagonal(num)) { return 8; }
+    return 0;
+  }
 }
 }
 
