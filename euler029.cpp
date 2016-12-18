@@ -36,8 +36,8 @@ int main(void)
 {
   std::vector<LargeInt<uInt>> v;
   v.reserve(99 * 99);
-  for (int a = 2; a < 101; a++) {
-    for (int b = 2; b < 101; b++) {
+  for (uInt a = 2; a < 101; a++) {
+    for (uInt b = 2; b < 101; b++) {
       v.push_back(large_pow(a, b));
     }
   }
