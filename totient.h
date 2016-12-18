@@ -44,7 +44,7 @@ namespace Totient
     for (Int_t i = 2; i <= 3; i++) {
       product_prime_factor(result, n, i);
     }
-    for (Int_t i = 5; i <= n / i; i += 6) {
+    for (Int_t i = 5; i * i <= n; i += 6) {
       product_prime_factor(result, n, i);
       product_prime_factor(result, n, i + 2);
     }
