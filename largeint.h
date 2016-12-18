@@ -23,6 +23,7 @@ namespace Euler
   public:
     /** 各要素の最大桁数(使用する整数型の最大値の桁数-1; 最大桁でやると計算途中で溢れる可能性がある) */
     static constexpr Int_t MAX_DIGITS = std::log10(std::numeric_limits<Int_t>::max());
+    static constexpr Int_t LIMIT_PER_TERMS = std::pow(10, MAX_DIGITS - 1);
 
   public:  // コンストラクタ
     /**
@@ -106,7 +107,6 @@ namespace Euler
       }
       auto size = dest->num.size();
 
-      constexpr Int_t THRESHOULD = std::pow(10, MAX_DIGITS - 1);
       for (decltype(size) i = 0; i < size; i++) {
         if (i >= another_size) {
           break;
@@ -114,8 +114,8 @@ namespace Euler
         dest->num.at(i) += another.num.at(i);
         // 要素を跨ぐ繰り上げ
         auto n = i;
-        while (dest->num.at(n) >= THRESHOULD) {
-          dest->num.at(n) -= THRESHOULD;
+        while (dest->num.at(n) >= LIMIT_PER_TERMS) {
+          dest->num.at(n) -= LIMIT_PER_TERMS;
           n++;
           if (n < size) {
             dest->num.at(n) += 1;
@@ -128,24 +128,41 @@ namespace Euler
       }
     }
 
-    /**
-     * 掛け算の内部実装
-     * @param times 掛ける数
-     * @param dest  結果を返す先
-     */
     inline
     void multi_impl(const Int_t times, LargeInt<Int_t>* dest)
     {
       check_availability();
-      if (times == 0) {
-        dest->num.clear();
-        dest->num.push_back(0);
+
+      if (times == 1) {
+        dest->num = num;
         return;
       }
 
-      LargeInt x = *this;
-      for (Int_t i = 1; i < times; i++) {
-        *dest += x;
+      dest->num.clear();
+      dest->num.push_back(0);
+      if (times == 0) {
+        return;
+      }
+
+      constexpr auto MAX = std::numeric_limits<Int_t>::max();
+      auto size = num.size();
+      dest->num.resize(size, 0);
+      for (decltype(size) i = 0; i < size; i++) {
+        if (num.at(i) == 0) { continue; }
+
+        const Int_t times_limit = MAX / num.at(i);
+        const Int_t mul_times = times / times_limit;
+        for (Int_t j = 0; j <= mul_times; j++) {
+          if (dest->num.size() < i + 1) { dest->num.resize(i + 1, 0); }
+          dest->num.at(i) += num.at(i) * (j < mul_times ? times_limit : (times - mul_times * times_limit));
+          auto k = i;
+          while (k < dest->num.size() && dest->num.at(k) >= LIMIT_PER_TERMS) {
+            if (dest->num.size() < k + 2) { dest->num.resize(k + 2, 0); }
+            dest->num.at(k + 1) += dest->num.at(k) / LIMIT_PER_TERMS;
+            dest->num.at(k) %= LIMIT_PER_TERMS;
+            k++;
+          }
+        }
       }
     }
 
@@ -211,7 +228,7 @@ namespace Euler
      */
     LargeInt<Int_t> operator*(const Int_t times)
     {
-      LargeInt<Int_t> result = *this;
+      LargeInt<Int_t> result(0);
       multi_impl(times, &result);
       return result;
     }
@@ -224,7 +241,9 @@ namespace Euler
      */
     LargeInt<Int_t>& operator*=(const Int_t times)
     {
-      multi_impl(times, this);
+      LargeInt<Int_t> result(0);
+      multi_impl(times, &result);
+      this->num = std::move(result.num);
       return *this;
     }
 
