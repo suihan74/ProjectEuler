@@ -6,7 +6,7 @@
 // 計算途中ででかい数になるため
 #include "largeint.h"
 
-using uInt = std::uint_least32_t;
+using uInt = std::uint_fast32_t;
 using LInt = Euler::LargeInt<uInt>;
 using Fraction = std::pair<LInt, LInt>;  // first: 分子, second: 分母
 
