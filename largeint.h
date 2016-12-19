@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 namespace Euler
 {
@@ -45,12 +46,13 @@ namespace Euler
       : failed(false)
     {
       Int_t n = 0;
-      auto size = vec.size();
+      const auto size = vec.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
       if (size > 0) {
-        num.reserve(static_cast<decltype(size)>(std::log10(size) + 1) / (MAX_DIGITS - 1));
+        num.reserve(static_cast<SizeType>(std::log10(size) + 1) / (MAX_DIGITS - 1));
       }
 
-      for (decltype(size) i = 0; i < size; i++) {
+      for (SizeType i = 0; i < size; i++) {
         if (*(vec.end() - i - 1) > 9) {
           failed = true;
           return;
@@ -105,9 +107,10 @@ namespace Euler
       if (dest->num.size() < another_size) {
         dest->num.resize(another_size, 0);
       }
-      auto size = dest->num.size();
+      const auto size = dest->num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
 
-      for (decltype(size) i = 0; i < size; i++) {
+      for (SizeType i = 0; i < size; i++) {
         if (i >= another_size) {
           break;
         }
@@ -137,17 +140,18 @@ namespace Euler
         dest->num = num;
         return;
       }
-
-      dest->num.clear();
-      dest->num.push_back(0);
       if (times == 0) {
+        dest->num.clear();
+        dest->num.push_back(0);
         return;
       }
 
       constexpr auto MAX = std::numeric_limits<Int_t>::max();
-      auto size = num.size();
+      const auto size = num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+
       dest->num.resize(size, 0);
-      for (decltype(size) i = 0; i < size; i++) {
+      for (SizeType i = 0; i < size; i++) {
         if (num.at(i) == 0) { continue; }
 
         const Int_t times_limit = MAX / num.at(i);
@@ -256,11 +260,13 @@ namespace Euler
     {
       check_availability();
       another.check_availability();
-      auto size = num.size();
-      auto another_size = another.num.size();
+      const auto size = num.size();
+      const auto another_size = another.num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+
       if (size < another_size) { return true; }
       if (size > another_size) { return false; }
-      for (decltype(size) i = 0; i < size; i++) {
+      for (SizeType i = 0; i < size; i++) {
         if (*(num.rbegin() + i) < *(another.num.rbegin() + i)) { return true; }
         if (*(num.rbegin() + i) > *(another.num.rbegin() + i)) { return false; }
       }
@@ -276,10 +282,12 @@ namespace Euler
     {
       check_availability();
       another.check_availability();
-      auto size = num.size();
-      auto another_size = another.num.size();
+      const auto size = num.size();
+      const auto another_size = another.num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+
       if (size != another_size) { return false; }
-      for (decltype(size) i = 0; i < size; i++) {
+      for (SizeType i = 0; i < size; i++) {
         if (*(num.rbegin() + i) != *(another.num.rbegin() + i)) { return false; }
       }
       return true;
