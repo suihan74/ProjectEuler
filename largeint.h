@@ -163,7 +163,7 @@ namespace Euler
     }
 
     inline
-    void multi_impl(const Int_t times, LargeInt<Int_t>* dest)
+    void multi_impl(const Int_t times, LargeInt<Int_t>* dest, const Int_t base_point = 0)
     {
       check_availability();
 
@@ -181,7 +181,7 @@ namespace Euler
       const auto size = num.size();
       using SizeType = typename std::remove_const<decltype(size)>::type;
 
-      dest->num.resize(size, 0);
+      dest->num.resize(base_point + size, 0);
       for (SizeType i = 0; i < size; i++) {
         if (num.at(i) == 0) { continue; }
 
@@ -189,10 +189,10 @@ namespace Euler
         const Int_t mul_times = times / times_limit;
         for (Int_t j = 0; j <= mul_times; j++) {
           if (dest->num.size() < i + 1) { dest->num.resize(i + 1, 0); }
-          dest->num.at(i) += num.at(i) * (j < mul_times ? times_limit : (times - mul_times * times_limit));
-          auto k = i;
+          dest->num.at(base_point + i) += num.at(i) * (j < mul_times ? times_limit : (times - mul_times * times_limit));
+          auto k = base_point + i;
           while (k < dest->num.size() && dest->num.at(k) >= LIMIT_PER_TERMS) {
-            if (dest->num.size() < k + 2) { dest->num.resize(k + 2, 0); }
+            if (dest->num.size() <= k + 1) { dest->num.resize(k + 2, 0); }
             dest->num.at(k + 1) += dest->num.at(k) / LIMIT_PER_TERMS;
             dest->num.at(k) %= LIMIT_PER_TERMS;
             k++;
@@ -305,25 +305,36 @@ namespace Euler
     }
 
     /**
-     * 比較演算
-     * @param another 比較対象（a<bのうちb）
-     * @return 自分の方が小さいかどうか
+     * 乗算
+     * @param times かける数（現状の実装では非LargeIntでなければならない点に注意）
+     * @return 乗算結果
      */
-    bool operator<(const LargeInt<Int_t>& another) const
+    LargeInt<Int_t> operator*(const LargeInt<Int_t>& another)
     {
-      check_availability();
-      another.check_availability();
-      const auto size = num.size();
-      const auto another_size = another.num.size();
+      LargeInt<Int_t> result(0);
+      const auto size = another.num.size();
       using SizeType = typename std::remove_const<decltype(size)>::type;
-
-      if (size < another_size) { return true; }
-      if (size > another_size) { return false; }
       for (SizeType i = 0; i < size; i++) {
-        if (*(num.rbegin() + i) < *(another.num.rbegin() + i)) { return true; }
-        if (*(num.rbegin() + i) > *(another.num.rbegin() + i)) { return false; }
+        multi_impl(another.num.at(i), &result, i);
       }
-      return false;
+      return result;
+    }
+
+    /**
+     * 乗算代入
+     * @param times 何回加算するか
+     * @return 自分自身
+     */
+    LargeInt<Int_t>& operator*=(const LargeInt<Int_t>& another)
+    {
+      LargeInt<Int_t> result(0);
+      const auto size = another.num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+      for (SizeType i = 0; i < size; i++) {
+        multi_impl(another.num.at(i), &result, i);
+      }
+      this->num = std::move(result.num);
+      return *this;
     }
 
     /**
