@@ -3,26 +3,13 @@
 #include <iostream>
 #include <utility>
 
-// 計算途中ででかい数になるため
+#include "continued_fraction.h"
 #include "largeint.h"
 
 using uInt = std::uint_fast32_t;
 using LInt = Euler::LargeInt<uInt>;
 using Fraction = std::pair<LInt, LInt>;  // first: 分子, second: 分母
-
-/**
- * ネイピア数の連分数を構成するa_kを計算する
- * @param idx  何番目のaが欲しいか
- * @return     a_(idx)
- */
-inline
-uInt napiers_term_at(uInt idx)
-{
-  if (idx == 0) { return 2; }
-  const uInt term = (idx - 1) / 3 + 1;
-  const uInt pos = (idx - 1) % 3;
-  return pos == 1 ? (2 * term) : 1;
-}
+using namespace Euler::ContinuedFraction;
 
 int main(void)
 {

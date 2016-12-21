@@ -48,12 +48,12 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
-#include <vector>
 
-// is_int関数を使うため
+#include "continued_fraction.h"
 #include "polygonal_number.h"
 
 using uInt = std::uint_fast32_t;
+using namespace Euler::ContinuedFraction;
 using Euler::is_int;
 
 int main(void)
@@ -61,37 +61,10 @@ int main(void)
   uInt count = 0;
   for (uInt n = 2; n <= 10000; n++) {
     const auto rt_n = std::sqrt(n);
-    if (is_int<double, uInt>(rt_n)) { continue; }
+    if (is_int(rt_n)) { continue; }
 
-    // a_1, a_2, ... を格納するためのベクタ
-    // 繰り返す部分だけが欲しいので，今回a_0は無視する
-    std::vector<uInt> a_vec;
-    // a_0のときだけ特殊化
-    // a_0, (sqrt(N) - b) / c;  b == a, c == 1
-    uInt a = rt_n;
-    uInt b = a;
-    uInt c = 1;
-
-    // 説明より，a_1から繰り返すことは確定しているっぽいので，
-    // a_1とともに生成される連分数のパーツを記録しておく
-    uInt b_1 = 0;
-    uInt c_1 = 0;
-    for (;;) {
-      // abcの計算順は変えちゃ駄目
-      c = (n - b * b) / c;
-      a = (rt_n + b) / c;
-      b = a * c - b;
-      if (c_1 == 0) {  // a_1の時の分数のパーツを記録
-        b_1 = b;
-        c_1 = c;
-      }
-      else if (b == b_1 && c == c_1) { // ループ点発見
-        break;
-      }
-      a_vec.push_back(a);
-    }
-
-    if (a_vec.size() % 2) {
+    const auto a_vec = make_cfrac_factors(n);
+    if ((a_vec.size() - 1) % 2 != 0) {
       count++;
     }
   }
