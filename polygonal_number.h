@@ -11,12 +11,12 @@ namespace Euler
    * @param num 対象の数値
    * @return  numの小数点以下が実質的に0であると言えるときtrue
    */
-  template <typename Real, typename Int>
+  template <typename Real>
   inline
   bool is_int(const Real num)
   {
     constexpr auto REAL_EPS = std::numeric_limits<Real>::epsilon();
-    return std::abs(num - Real(Int(num))) < REAL_EPS;
+    return std::abs(num - std::floor(num)) < REAL_EPS;
   }
 
 namespace PolygonalNumber
@@ -34,7 +34,7 @@ namespace PolygonalNumber
     // n ^ 2 + n - 2 * Tn = 0
     // n = (-1 + sqrt(1 + 8 * Tn)) / 2
     const auto nf = (std::sqrt(1 + 8 * num) - 1) / 2;
-    return is_int<decltype(nf), Int_t>(nf);
+    return is_int<decltype(nf)>(nf);
   }
 
   /**
@@ -49,7 +49,7 @@ namespace PolygonalNumber
     // n^2 = Sn
     // n = sqrt(Sn) が整数のときtrue
     const auto nf = std::sqrt(num);
-    return is_int<decltype(nf), Int_t>(nf);
+    return is_int<decltype(nf)>(nf);
   }
 
   /**
@@ -66,7 +66,7 @@ namespace PolygonalNumber
     // 3 * n^2 - n - 2 * Pn = 0
     // n = (1 + sqrt(1 + 24 * Pn)) / 6 が整数のときtrue
     const auto nf = (1 + std::sqrt(1 + 24 * num)) / 6;
-    return is_int<decltype(nf), Int_t>(nf);
+    return is_int<decltype(nf)>(nf);
   }
 
   /**
@@ -82,7 +82,7 @@ namespace PolygonalNumber
     // 2 * n ^ 2 - n - Hn = 0
     // n = (1 + sqrt(1 + 8 * Hn)) / 4 が整数のときtrue
     const auto nf = (1 + std::sqrt(1 + 8 * num)) / 4;
-    return is_int<decltype(nf), Int_t>(nf);
+    return is_int<decltype(nf)>(nf);
   }
 
   /**
@@ -98,7 +98,7 @@ namespace PolygonalNumber
     // 5 * n ^ 2 - 3 * n - 2 * Hn = 0
     // n = (3 + sqrt(9 + 40 * Hn)) / 10 が整数のときtrue
     const auto nf = (3 + std::sqrt(9 + 40 * num)) / 10;
-    return is_int<decltype(nf), Int_t>(nf);
+    return is_int<decltype(nf)>(nf);
   }
 
   /**
@@ -114,7 +114,7 @@ namespace PolygonalNumber
     // 3 * n ^ 2 - 2 * n - On = 0
     // n = (1 + sqrt(1 + 3 * On)) / 3 が整数のときtrue
     const auto nf = (1 + std::sqrt(1 + 3 * num)) / 3;
-    return is_int<decltype(nf), Int_t>(nf);
+    return is_int<decltype(nf)>(nf);
   }
 
 
