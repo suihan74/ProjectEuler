@@ -93,6 +93,37 @@ namespace Euler
     }
 
   private:
+    inline
+    void add_int_impl(Int_t another, LargeInt<Int_t>* dest)
+    {
+      check_availability();
+      if (dest != this) {
+        dest->num = this->num;
+      }
+      constexpr auto MAX = std::numeric_limits<Int_t>::max();
+      constexpr auto STEP = MAX - LIMIT_PER_TERMS;
+      const auto size = dest->num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+      do {
+        if (another > STEP) {
+          dest->num.at(0) += STEP;
+          another -= STEP;
+        }
+        else {
+          dest->num.at(0) += another;
+          another = 0;
+        }
+
+        SizeType i = 0;
+        while (i < dest->num.size() && dest->num.at(i) >= LIMIT_PER_TERMS) {
+          if (dest->num.size() < i + 2) { dest->num.resize(i + 2, 0); }
+          dest->num.at(i + 1) += dest->num.at(i) / LIMIT_PER_TERMS;
+          dest->num.at(i) %= LIMIT_PER_TERMS;
+          i++;
+        }
+      } while(another);
+    }
+
     /**
      * 足し算の内部実装
      * @param another  足す数(a+bのときのb)
@@ -207,6 +238,29 @@ namespace Euler
      * @param another 足す数
      * @return 加算結果
      */
+    LargeInt<Int_t> operator+(const Int_t another)
+    {
+      LargeInt<Int_t> result = *this;
+      add_int_impl(another, &result);
+      return result;
+    }
+
+    /**
+     * 加算代入
+     * @param another  足す数
+     * @return 自分自身
+     */
+    LargeInt<Int_t>& operator+=(const Int_t another)
+    {
+      add_int_impl(another, this);
+      return *this;
+    }
+
+    /**
+     * 加算
+     * @param another 足す数
+     * @return 加算結果
+     */
     LargeInt<Int_t> operator+(const LargeInt<Int_t>& another)
     {
       LargeInt<Int_t> result = *this;
@@ -238,8 +292,7 @@ namespace Euler
     }
 
     /**
-     * 実装面倒なので，乗算の代わりにtimes回加算を繰り返す
-     * （そのため頑張って掛け算するより遅い）
+     * 乗算代入
      * @param times 何回加算するか
      * @return 自分自身
      */
@@ -278,7 +331,8 @@ namespace Euler
      * @param another 比較対象（a==bのうちb）
      * @return 値が一致するかどうか
      */
-    bool operator==(const LargeInt<Int_t>& another) const
+    bool operator==(const LargeInt<Int_t>& another)
+    const
     {
       check_availability();
       another.check_availability();
@@ -291,6 +345,47 @@ namespace Euler
         if (*(num.rbegin() + i) != *(another.num.rbegin() + i)) { return false; }
       }
       return true;
+    }
+
+    /**
+     * 比較演算
+     * @param another 比較対象（a<bのうちb）
+     * @return 自分の方が小さいかどうか
+     */
+    bool operator<(const LargeInt<Int_t>& another)
+    const
+    {
+      check_availability();
+      another.check_availability();
+      const auto size = num.size();
+      const auto another_size = another.num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+
+      if (size < another_size) { return true; }
+      if (size > another_size) { return false; }
+      for (SizeType i = 0; i < size; i++) {
+        if (*(num.rbegin() + i) < *(another.num.rbegin() + i)) { return true; }
+        if (*(num.rbegin() + i) > *(another.num.rbegin() + i)) { return false; }
+      }
+      return false;
+    }
+
+    bool operator<=(const LargeInt<Int_t>& another)
+    const
+    {
+      return this->operator<(another) || this->operator==(another);
+    }
+
+    bool operator>(const LargeInt<Int_t>& another)
+    const
+    {
+      return another.operator<(*this);
+    }
+
+    bool operator>=(const LargeInt<Int_t>& another)
+    const
+    {
+      return another.operator<(*this) || this->operator==(another);
     }
 
   public:  // ユーティリティ
@@ -340,7 +435,8 @@ namespace Euler
     /**
      * 各位の数の和を計算
      */
-    Int_t digits_sum() const
+    Int_t digits_sum()
+    const
     {
       check_availability();
       Int_t sum = 0;
@@ -359,7 +455,8 @@ namespace Euler
      * @return  内部数値の桁数
      */
     inline
-    std::size_t num_digits() const
+    std::size_t num_digits()
+    const
     {
       check_availability();
       return (num.size() - 1) * (MAX_DIGITS - 1) + std::log10(*num.rbegin()) + 1;
