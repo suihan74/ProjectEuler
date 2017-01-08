@@ -39,12 +39,12 @@ namespace Prime
   template <typename Int_t>
   std::vector<Int_t> make_primes_vector_impl(const Int_t MAX, std::vector<NumberType>* tbl)
   {
-    std::vector<Int_t> primes {2};
+    std::vector<Int_t> primes;
     tbl->resize(MAX + 1, NumberType::PRIME);
     tbl->at(0) = NumberType::COMPOSITE;
     tbl->at(1) = NumberType::COMPOSITE;
     if (MAX < 3) {
-      if (MAX == 2) { return primes; }
+      if (MAX == 2) { primes.push_back(2); return primes; }
       throw std::out_of_range("the argument of make_primes_vector() is must be 2 or over");
     }
     // エラトステネスの篩やりながら素数リストを生成
