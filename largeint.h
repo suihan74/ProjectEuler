@@ -28,66 +28,6 @@ namespace Euler
     static constexpr Int_t MAX_DIGITS = std::log10(std::numeric_limits<Int_t>::max());
     static constexpr Int_t LIMIT_PER_TERMS = std::pow(10, MAX_DIGITS - 1);
 
-  public:  // コンストラクタ
-    /**
-     * 普通のInt_tから生成
-     * @param init 初期値
-     */
-    LargeInt(Int_t init)
-      : is_negative(init < 0),
-        failed(false)
-    {
-      num.push_back(init < 0 ? -init : init);
-    }
-
-    /**
-     * 値を表現する数値列から生成
-     * ex) 12345 -> {1,2,3,4,5}
-     * @param  vec 初期値を表す数値列
-     */
-    LargeInt(const std::initializer_list<Int_t>& vec)
-      : is_negative(false),
-        failed(false)
-    {
-      Int_t n = 0;
-      const auto size = vec.size();
-      using SizeType = typename std::remove_const<decltype(size)>::type;
-      if (size > 0) {
-        num.reserve(static_cast<SizeType>(std::log10(size) + 1) / (MAX_DIGITS - 1));
-      }
-
-      for (SizeType i = 0; i < size; i++) {
-        if (*(vec.end() - i - 1) > 9) {
-          failed = true;
-          return;
-        }
-        if ((i > 0 && i + 1 < size && i % (MAX_DIGITS - 1) == 0)) {
-          num.push_back(n);
-          n = 0;
-        }
-        n += std::pow(10, i % (MAX_DIGITS - 1)) * (*(vec.end() - i - 1));
-      }
-      num.push_back(n);
-    }
-
-    /**
-     * コピーコンストラクタ
-     */
-    LargeInt(const LargeInt<Int_t>& src)
-      : num(src.num),
-        is_negative(src.is_negative),
-        failed(src.failed)
-      {}
-
-    /**
-     * ムーブコンストラクタ
-     */
-    LargeInt(LargeInt<Int_t>&& src)
-      : num(std::move(src.num)),
-        is_negative(std::move(src.is_negative)),
-        failed(std::move(src.failed))
-      {}
-
   private:
     /**
      * 生成に失敗したオブジェクトを使っていないかチェック
@@ -275,9 +215,11 @@ namespace Euler
      */
     LargeInt<Int_t>& operator=(const LargeInt<Int_t>& src)
     {
-      num = src.num;
-      is_negative = src.is_negative;
-      failed = src.failed;
+      if (this != &src) {
+        num = src.num;
+        is_negative = src.is_negative;
+        failed = src.failed;
+      }
       return *this;
     }
 
@@ -298,9 +240,11 @@ namespace Euler
      */
     LargeInt<Int_t>& operator=(LargeInt<Int_t>&& src)
     {
-      num = std::move(src.num);
-      is_negative = std::move(src.is_negative);
-      failed = std::move(src.failed);
+      if (this != &src) {
+        num         = std::move(src.num);
+        is_negative = std::move(src.is_negative);
+        failed      = std::move(src.failed);
+      }
       return *this;
     }
 
@@ -686,6 +630,66 @@ public:
     {
       check_availability();
       return (num.size() - 1) * (MAX_DIGITS - 1) + std::log10(*num.rbegin()) + 1;
+    }
+
+  public:  // コンストラクタ
+    /**
+     * 普通のInt_tから生成
+     * @param init 初期値
+     */
+    LargeInt(Int_t init)
+      : is_negative(init < 0),
+        failed(false)
+    {
+      num.push_back(init < 0 ? -init : init);
+    }
+
+    /**
+     * 値を表現する数値列から生成
+     * ex) 12345 -> {1,2,3,4,5}
+     * @param  vec 初期値を表す数値列
+     */
+    LargeInt(const std::initializer_list<Int_t>& vec)
+      : is_negative(false),
+        failed(false)
+    {
+      Int_t n = 0;
+      const auto size = vec.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+      if (size > 0) {
+        num.reserve(static_cast<SizeType>(std::log10(size) + 1) / (MAX_DIGITS - 1));
+      }
+
+      for (SizeType i = 0; i < size; i++) {
+        if (*(vec.end() - i - 1) > 9) {
+          failed = true;
+          return;
+        }
+        if ((i > 0 && i + 1 < size && i % (MAX_DIGITS - 1) == 0)) {
+          num.push_back(n);
+          n = 0;
+        }
+        n += std::pow(10, i % (MAX_DIGITS - 1)) * (*(vec.end() - i - 1));
+      }
+      num.push_back(n);
+    }
+
+    /**
+     * コピーコンストラクタ
+     */
+    LargeInt(const LargeInt<Int_t>& src)
+    noexcept
+    {
+      *this = src;
+    }
+
+    /**
+     * ムーブコンストラクタ
+     */
+    LargeInt(LargeInt<Int_t>&& src)
+    noexcept
+    {
+      *this = std::move(src);
     }
   };
 
