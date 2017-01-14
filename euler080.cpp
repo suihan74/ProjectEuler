@@ -9,12 +9,11 @@
  * 初めの100個の自然数の平方根のうち, 無理数について, それぞれの頭から100桁の数字を足した数の総和を求めよ.
  */
 
-#include <algorithm>
-
 #include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <vector>
 
 #include "largeint.h"
