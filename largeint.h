@@ -609,20 +609,33 @@ public:
     bool fail() const { return failed; }
 
     /**
-     * 内部の値の文字列化
+     * 内部の値のストリーム出力
+     * @param os 出力ストリーム
      */
-    std::string str() const
+    void to_stream(std::ostream& os)
+    const
     {
       check_availability();
-      std::ostringstream oss;
-      if (is_negative) { oss << "-"; }
+      if (is_negative) { os << "-"; }
       for (auto it = num.rbegin(); it < num.rend(); it++) {
         const Int_t digits = (*it == 0) ? 1 : std::log10(*it) + 1;
         for (Int_t i = digits + 1; it != num.rbegin() && i < MAX_DIGITS; i++) {
-          oss << 0;
+          os << 0;
         }
-        oss << *it;
+        os << *it;
       }
+    }
+
+    /**
+     * 内部の値の文字列化
+     */
+    inline
+    std::string str()
+    const
+    {
+      check_availability();
+      std::ostringstream oss;
+      to_stream(oss);
       return oss.str();
     }
 
@@ -713,6 +726,16 @@ namespace std
   {
     return li.str();
   }
+}
+
+/**
+ * LargeIntをストリーム出力するための演算子オーバーロード
+ */
+template <typename Int_t>
+std::ostream& operator<<(std::ostream& os, const Euler::LargeInt<Int_t>& li)
+{
+  li.to_stream(os);
+  return os;
 }
 
 #endif

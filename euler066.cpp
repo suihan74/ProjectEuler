@@ -40,6 +40,6 @@ int main(void)
     }
   }
 
-  std::cout << "Euler066: " << best_d << " (x = " << best_x.str() << ")" << std::endl;
+  std::cout << "Euler066: " << best_d << " (x = " << best_x << ")" << std::endl;
   return 0;
 }
