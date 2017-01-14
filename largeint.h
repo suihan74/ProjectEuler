@@ -94,11 +94,9 @@ namespace Euler
   private:
     inline
     void add_int_impl(Int_t another, LargeInt<Int_t>* dest)
+    const
     {
       check_availability();
-      if (dest != this) {
-        dest->num = this->num;
-      }
       constexpr auto MAX = std::numeric_limits<Int_t>::max();
       constexpr auto STEP = MAX - LIMIT_PER_TERMS;
       const auto size = dest->num.size();
@@ -130,6 +128,7 @@ namespace Euler
      */
     inline
     void add_impl(const LargeInt<Int_t>& another, LargeInt<Int_t>* dest)
+    const
     {
       check_availability();
       another.check_availability();
@@ -161,8 +160,10 @@ namespace Euler
       }
     }
 
+    /**
     inline
-    void multi_impl(const Int_t times, LargeInt<Int_t>* dest, const Int_t base_point = 0)
+    void multi_int_impl(const Int_t times, LargeInt<Int_t>* dest, const Int_t base_point = 0)
+    const
     {
       check_availability();
 
@@ -176,20 +177,27 @@ namespace Euler
         return;
       }
 
-      constexpr auto MAX = std::numeric_limits<Int_t>::max();
       const auto size = num.size();
       using SizeType = typename std::remove_const<decltype(size)>::type;
 
+      const Int_t MAX = std::numeric_limits<Int_t>::max();
       dest->num.resize(base_point + size, 0);
       for (SizeType i = 0; i < size; i++) {
         if (num.at(i) == 0) { continue; }
 
-        const Int_t times_limit = MAX / num.at(i);
-        const Int_t mul_times = times / times_limit;
-        for (Int_t j = 0; j <= mul_times; j++) {
-          if (dest->num.size() < i + 1) { dest->num.resize(i + 1, 0); }
-          dest->num.at(base_point + i) += num.at(i) * (j < mul_times ? times_limit : (times - mul_times * times_limit));
+        Int_t n = times;
+        while (n > 0) {
           auto k = base_point + i;
+
+          Int_t times_limit = (MAX - dest->num.at(k)) / num.at(i);
+          if (n < times_limit) {
+            times_limit = n;
+          }
+
+          if (dest->num.size() < i + 1) { dest->num.resize(i + 1, 0); }
+          dest->num.at(k) += num.at(i) * times_limit;
+          n -= times_limit;
+          // 要素を跨ぐ繰り上げ
           while (k < dest->num.size() && dest->num.at(k) >= LIMIT_PER_TERMS) {
             if (dest->num.size() <= k + 1) { dest->num.resize(k + 2, 0); }
             dest->num.at(k + 1) += dest->num.at(k) / LIMIT_PER_TERMS;
@@ -238,6 +246,7 @@ namespace Euler
      * @return 加算結果
      */
     LargeInt<Int_t> operator+(const Int_t another)
+    const
     {
       LargeInt<Int_t> result = *this;
       add_int_impl(another, &result);
@@ -261,6 +270,7 @@ namespace Euler
      * @return 加算結果
      */
     LargeInt<Int_t> operator+(const LargeInt<Int_t>& another)
+    const
     {
       LargeInt<Int_t> result = *this;
       add_impl(another, &result);
@@ -284,9 +294,10 @@ namespace Euler
      * @return 乗算結果
      */
     LargeInt<Int_t> operator*(const Int_t times)
+    const
     {
       LargeInt<Int_t> result(0);
-      multi_impl(times, &result);
+      multi_int_impl(times, &result);
       return result;
     }
 
@@ -298,7 +309,7 @@ namespace Euler
     LargeInt<Int_t>& operator*=(const Int_t times)
     {
       LargeInt<Int_t> result(0);
-      multi_impl(times, &result);
+      multi_int_impl(times, &result);
       this->num = std::move(result.num);
       return *this;
     }
@@ -309,12 +320,13 @@ namespace Euler
      * @return 乗算結果
      */
     LargeInt<Int_t> operator*(const LargeInt<Int_t>& another)
+    const
     {
       LargeInt<Int_t> result(0);
       const auto size = another.num.size();
       using SizeType = typename std::remove_const<decltype(size)>::type;
       for (SizeType i = 0; i < size; i++) {
-        multi_impl(another.num.at(i), &result, i);
+        multi_int_impl(another.num.at(i), &result, i);
       }
       return result;
     }
@@ -330,7 +342,7 @@ namespace Euler
       const auto size = another.num.size();
       using SizeType = typename std::remove_const<decltype(size)>::type;
       for (SizeType i = 0; i < size; i++) {
-        multi_impl(another.num.at(i), &result, i);
+        multi_int_impl(another.num.at(i), &result, i);
       }
       this->num = std::move(result.num);
       return *this;
