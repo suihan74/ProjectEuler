@@ -18,6 +18,9 @@ namespace Euler
   private:
     /** 巨大な整数の内部表現 */
     std::vector<Int_t> num;
+    /** 符号 */
+    bool is_negative;
+    /** 内部値が不正な場合failed == true */
     bool failed;
 
   public:
@@ -31,9 +34,10 @@ namespace Euler
      * @param init 初期値
      */
     LargeInt(Int_t init)
-      : failed(false)
+      : is_negative(init < 0),
+        failed(false)
     {
-      num.push_back(init);
+      num.push_back(init < 0 ? -init : init);
     }
 
     /**
@@ -42,7 +46,8 @@ namespace Euler
      * @param  vec 初期値を表す数値列
      */
     LargeInt(const std::initializer_list<Int_t>& vec)
-      : failed(false)
+      : is_negative(false),
+        failed(false)
     {
       Int_t n = 0;
       const auto size = vec.size();
@@ -69,14 +74,18 @@ namespace Euler
      * コピーコンストラクタ
      */
     LargeInt(const LargeInt<Int_t>& src)
-      : num(src.num), failed(src.failed)
+      : num(src.num),
+        is_negative(src.is_negative),
+        failed(src.failed)
       {}
 
     /**
      * ムーブコンストラクタ
      */
     LargeInt(LargeInt<Int_t>&& src)
-      : num(std::move(src.num)), failed(std::move(src.failed))
+      : num(std::move(src.num)),
+        is_negative(std::move(src.is_negative)),
+        failed(std::move(src.failed))
       {}
 
   private:
@@ -161,6 +170,58 @@ namespace Euler
     }
 
     /**
+     * 引き算の内部実装
+     * @param another  引く数(a-bのときのb)
+     * @param dest     結果を返す先
+     */
+    inline
+    void sub_impl(const LargeInt<Int_t>& another, LargeInt<Int_t>* dest)
+    const
+    {
+      check_availability();
+      another.check_availability();
+      const auto another_size = another.num.size();
+      if (dest->num.size() < another_size) {
+        dest->num.resize(another_size, 0);
+      }
+      const auto size = dest->num.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+
+      for (SizeType i = 0; i < size; i++) {
+        if (i >= another_size) {
+          break;
+        }
+        if (dest->num.at(i) >= another.num.at(i)) {
+          dest->num.at(i) -= another.num.at(i);
+          continue;
+        }
+        // 要素を跨ぐ繰り下げ
+        dest->num.at(i) = LIMIT_PER_TERMS - (another.num.at(i) - dest->num.at(i));
+        auto n = i + 1;
+        while (i < size && dest->num.at(n) >= 0) {
+          if (dest->num.at(n) > 0) {
+            dest->num.at(n)--;
+            break;
+          }
+          dest->num.at(n) = LIMIT_PER_TERMS - 1;
+          n++;
+        }
+      }
+
+      // 最上位の0要素を消去
+      SizeType delete_count = 0;
+      for (auto iter = dest->num.rbegin(); iter != dest->num.rend(); iter++) {
+        if (*iter > 0) { break; }
+        if (*iter == 0 && iter != dest->num.rend() - 1) {
+          delete_count++;
+        }
+      }
+      if (delete_count > 0) {
+        dest->num.erase(dest->num.cend() - delete_count, dest->num.cend());
+      }
+    }
+
+
     inline
     void multi_int_impl(const Int_t times, LargeInt<Int_t>* dest, const Int_t base_point = 0)
     const
@@ -215,6 +276,7 @@ namespace Euler
     LargeInt<Int_t>& operator=(const LargeInt<Int_t>& src)
     {
       num = src.num;
+      is_negative = src.is_negative;
       failed = src.failed;
       return *this;
     }
@@ -226,6 +288,7 @@ namespace Euler
     {
       num.clear();
       num.push_back(n);
+      is_negative = n < 0;
       failed = false;
       return *this;
     }
@@ -236,6 +299,7 @@ namespace Euler
     LargeInt<Int_t>& operator=(LargeInt<Int_t>&& src)
     {
       num = std::move(src.num);
+      is_negative = std::move(src.is_negative);
       failed = std::move(src.failed);
       return *this;
     }
@@ -260,9 +324,44 @@ namespace Euler
      */
     LargeInt<Int_t>& operator+=(const Int_t another)
     {
-      add_int_impl(another, this);
+      LargeInt<Int_t> result = *this;
+      add_int_impl(another, &result);
+      this->num = std::move(result.num);
+      this->is_negative = std::move(result.is_negative);
       return *this;
     }
+
+private:
+    inline
+    LargeInt<Int_t> add_control(const LargeInt<Int_t>& another)
+    const
+    {
+      if (is_negative && !another.is_negative) {
+        // -a + b = b - a
+        LargeInt<Int_t> result = another;
+        sub_impl(*this, &result);
+        if (*this > another) {
+          result.is_negative = true;
+        }
+        return result;
+      }
+      else if (!is_negative && another.is_negative) {
+        // a + (-b) = a - b
+        LargeInt<Int_t> result = *this;
+        sub_impl(another, &result);
+        if (*this < another) {
+          result.is_negative = true;
+        }
+        return result;
+      }
+
+      // (a + b) or (-a + (-b))
+      LargeInt<Int_t> result = *this;
+      add_impl(another, &result);
+      return result;
+    }
+
+public:
 
     /**
      * 加算
@@ -272,9 +371,7 @@ namespace Euler
     LargeInt<Int_t> operator+(const LargeInt<Int_t>& another)
     const
     {
-      LargeInt<Int_t> result = *this;
-      add_impl(another, &result);
-      return result;
+      return add_control(another);
     }
 
     /**
@@ -284,7 +381,94 @@ namespace Euler
      */
     LargeInt<Int_t>& operator+=(const LargeInt<Int_t>& another)
     {
-      add_impl(another, this);
+      auto result = add_control(another);
+      this->num = std::move(result.num);
+      this->is_negative = std::move(result.is_negative);
+      return *this;
+    }
+
+    /**
+     * 減算
+     * @param another 引く数
+     * @return 減算結果
+     */
+    LargeInt<Int_t> operator-(const Int_t another)
+    {
+      LargeInt<Int_t> result = *this;
+      //sub_int_impl(another, &result);
+      return result;
+    }
+
+    /**
+     * 減算代入
+     * @param another  引く数
+     * @return 自分自身
+     */
+    LargeInt<Int_t>& operator-=(const Int_t another)
+    {
+      //sub_int_impl(another, this);
+      return *this;
+    }
+
+private:
+    inline
+    LargeInt<Int_t> sub_control(const LargeInt<Int_t>& another)
+    const
+    {
+      if (another == 0) { return *this; }
+      if (is_negative == another.is_negative) {
+        if ((is_negative && *this < another)      // -a - (-b) = b - a  (if b > a then)
+         || (!is_negative && *this < another))    // a - b (if b > a then)
+        {
+          LargeInt<Int_t> result = another;
+          sub_impl(*this, &result);
+          result.is_negative = !is_negative;
+          return result;
+        }
+        else {                                    // b - a (if a > b then)
+          LargeInt<Int_t> result = *this;
+          sub_impl(another, &result);
+          result.is_negative = is_negative;
+          return result;
+        }
+      }
+
+      LargeInt<Int_t> result = *this;
+      if (is_negative && !another.is_negative) {
+        // -a - b = -(a + b)
+        add_impl(another, &result);
+        result.is_negative = true;
+      }
+      else if (!is_negative && another.is_negative) {
+        // a - (-b) = a + b
+        add_impl(another, &result);
+        result.is_negative = false;
+      }
+      return result;
+    }
+
+public:
+    /**
+     * 減算
+     * @param another 引く数
+     * @return 減算結果
+     */
+    LargeInt<Int_t> operator-(const LargeInt<Int_t>& another)
+    const
+    {
+      return sub_control(another);
+    }
+
+    /**
+     * 減算代入
+     * @param another  引く数
+     * @return 自分自身
+     */
+    LargeInt<Int_t>& operator-=(const LargeInt<Int_t>& another)
+    {
+      auto result = sub_control(another);
+      this->num = std::move(result.num);
+      this->is_negative = std::move(result.is_negative);
       return *this;
     }
 
@@ -298,6 +482,7 @@ namespace Euler
     {
       LargeInt<Int_t> result(0);
       multi_int_impl(times, &result);
+      result.is_negative = (times < 0 && !is_negative) || (times >= 0 && is_negative);
       return result;
     }
 
@@ -311,6 +496,7 @@ namespace Euler
       LargeInt<Int_t> result(0);
       multi_int_impl(times, &result);
       this->num = std::move(result.num);
+      this->is_negative = (times < 0 && !is_negative) || (times >= 0 && is_negative);
       return *this;
     }
 
@@ -328,6 +514,7 @@ namespace Euler
       for (SizeType i = 0; i < size; i++) {
         multi_int_impl(another.num.at(i), &result, i);
       }
+      result.is_negative = is_negative != another.is_negative;
       return result;
     }
 
@@ -345,6 +532,7 @@ namespace Euler
         multi_int_impl(another.num.at(i), &result, i);
       }
       this->num = std::move(result.num);
+      this->is_negative = is_negative != another.is_negative;
       return *this;
     }
 
@@ -358,6 +546,7 @@ namespace Euler
     {
       check_availability();
       another.check_availability();
+      if (another.is_negative != this->is_negative) { return false; }
       const auto size = num.size();
       const auto another_size = another.num.size();
       using SizeType = typename std::remove_const<decltype(size)>::type;
@@ -379,17 +568,18 @@ namespace Euler
     {
       check_availability();
       another.check_availability();
+      if (is_negative != another.is_negative) { return is_negative; }
       const auto size = num.size();
       const auto another_size = another.num.size();
       using SizeType = typename std::remove_const<decltype(size)>::type;
 
-      if (size < another_size) { return true; }
-      if (size > another_size) { return false; }
+      if (size < another_size) { return !is_negative; }
+      if (size > another_size) { return is_negative; }
       for (SizeType i = 0; i < size; i++) {
-        if (*(num.rbegin() + i) < *(another.num.rbegin() + i)) { return true; }
-        if (*(num.rbegin() + i) > *(another.num.rbegin() + i)) { return false; }
+        if (*(num.rbegin() + i) < *(another.num.rbegin() + i)) { return !is_negative; }
+        if (*(num.rbegin() + i) > *(another.num.rbegin() + i)) { return is_negative; }
       }
-      return false;
+      return is_negative;
     }
 
     bool operator<=(const LargeInt<Int_t>& another)
@@ -425,6 +615,7 @@ namespace Euler
     {
       check_availability();
       std::ostringstream oss;
+      if (is_negative) { oss << "-"; }
       for (auto it = num.rbegin(); it < num.rend(); it++) {
         const Int_t digits = (*it == 0) ? 1 : std::log10(*it) + 1;
         for (Int_t i = digits + 1; it != num.rbegin() && i < MAX_DIGITS; i++) {
