@@ -28,6 +28,66 @@ namespace Euler
     static constexpr Int_t MAX_DIGITS = std::log10(std::numeric_limits<Int_t>::max());
     static constexpr Int_t LIMIT_PER_TERMS = std::pow(10, MAX_DIGITS - 1);
 
+  public:  // コンストラクタ
+    /**
+     * 普通のInt_tから生成
+     * @param init 初期値
+     */
+    LargeInt(Int_t init)
+      : is_negative(init < 0),
+        failed(false)
+    {
+      num.push_back(init < 0 ? -init : init);
+    }
+
+    /**
+     * 値を表現する数値列から生成
+     * ex) 12345 -> {1,2,3,4,5}
+     * @param  vec 初期値を表す数値列
+     */
+    LargeInt(const std::initializer_list<Int_t>& vec)
+      : is_negative(false),
+        failed(false)
+    {
+      Int_t n = 0;
+      const auto size = vec.size();
+      using SizeType = typename std::remove_const<decltype(size)>::type;
+      if (size > 0) {
+        num.reserve(static_cast<SizeType>(std::log10(size) + 1) / (MAX_DIGITS - 1));
+      }
+
+      for (SizeType i = 0; i < size; i++) {
+        if (*(vec.end() - i - 1) > 9) {
+          failed = true;
+          return;
+        }
+        if ((i > 0 && i + 1 < size && i % (MAX_DIGITS - 1) == 0)) {
+          num.push_back(n);
+          n = 0;
+        }
+        n += std::pow(10, i % (MAX_DIGITS - 1)) * (*(vec.end() - i - 1));
+      }
+      num.push_back(n);
+    }
+
+    /**
+     * コピーコンストラクタ
+     */
+    LargeInt(const LargeInt<Int_t>& src)
+    noexcept
+    {
+      *this = src;
+    }
+
+    /**
+     * ムーブコンストラクタ
+     */
+    LargeInt(LargeInt<Int_t>&& src)
+    noexcept
+    {
+      *this = std::move(src);
+    }
+
   private:
     /**
      * 生成に失敗したオブジェクトを使っていないかチェック
@@ -41,41 +101,11 @@ namespace Euler
     }
 
   private:
-    inline
-    void add_int_impl(Int_t another, LargeInt<Int_t>* dest)
-    const
-    {
-      check_availability();
-      constexpr auto MAX = std::numeric_limits<Int_t>::max();
-      constexpr auto STEP = MAX - LIMIT_PER_TERMS;
-      const auto size = dest->num.size();
-      using SizeType = typename std::remove_const<decltype(size)>::type;
-      do {
-        if (another > STEP) {
-          dest->num.at(0) += STEP;
-          another -= STEP;
-        }
-        else {
-          dest->num.at(0) += another;
-          another = 0;
-        }
-
-        SizeType i = 0;
-        while (i < dest->num.size() && dest->num.at(i) >= LIMIT_PER_TERMS) {
-          if (dest->num.size() < i + 2) { dest->num.resize(i + 2, 0); }
-          dest->num.at(i + 1) += dest->num.at(i) / LIMIT_PER_TERMS;
-          dest->num.at(i) %= LIMIT_PER_TERMS;
-          i++;
-        }
-      } while(another);
-    }
-
     /**
      * 足し算の内部実装
      * @param another  足す数(a+bのときのb)
      * @param dest     結果を返す先
      */
-    inline
     void add_impl(const LargeInt<Int_t>& another, LargeInt<Int_t>* dest)
     const
     {
@@ -114,7 +144,6 @@ namespace Euler
      * @param another  引く数(a-bのときのb)
      * @param dest     結果を返す先
      */
-    inline
     void sub_impl(const LargeInt<Int_t>& another, LargeInt<Int_t>* dest)
     const
     {
@@ -161,8 +190,12 @@ namespace Euler
       }
     }
 
-
-    inline
+    /**
+     * 乗算の内部実装
+     * @param times       かける数
+     * @param dest        出力先
+     * @param base_point  出力先の出力開始位置
+     */
     void multi_int_impl(const Int_t times, LargeInt<Int_t>* dest, const Int_t base_point = 0)
     const
     {
@@ -213,6 +246,7 @@ namespace Euler
     /**
      * 代入
      */
+    inline
     LargeInt<Int_t>& operator=(const LargeInt<Int_t>& src)
     {
       if (this != &src) {
@@ -226,6 +260,7 @@ namespace Euler
     /**
      * 通常の整数から代入
      */
+    inline
     LargeInt<Int_t>& operator=(const Int_t n)
     {
       num.clear();
@@ -238,6 +273,7 @@ namespace Euler
     /**
      * 移譲
      */
+    inline
     LargeInt<Int_t>& operator=(LargeInt<Int_t>&& src)
     {
       if (this != &src) {
@@ -248,35 +284,7 @@ namespace Euler
       return *this;
     }
 
-    /**
-     * 加算
-     * @param another 足す数
-     * @return 加算結果
-     */
-    LargeInt<Int_t> operator+(const Int_t another)
-    const
-    {
-      LargeInt<Int_t> result = *this;
-      add_int_impl(another, &result);
-      return result;
-    }
-
-    /**
-     * 加算代入
-     * @param another  足す数
-     * @return 自分自身
-     */
-    LargeInt<Int_t>& operator+=(const Int_t another)
-    {
-      LargeInt<Int_t> result = *this;
-      add_int_impl(another, &result);
-      this->num = std::move(result.num);
-      this->is_negative = std::move(result.is_negative);
-      return *this;
-    }
-
-private:
-    inline
+  private:
     LargeInt<Int_t> add_control(const LargeInt<Int_t>& another)
     const
     {
@@ -305,13 +313,37 @@ private:
       return result;
     }
 
-public:
+  public:
+    /**
+     * 加算
+     * @param another 足す数
+     * @return 加算結果
+     */
+    inline
+    LargeInt<Int_t> operator+(const Int_t another)
+    const
+    {
+      return (*this + LargeInt<Int_t>(another));
+    }
+
+    /**
+     * 加算代入
+     * @param another  足す数
+     * @return 自分自身
+     */
+    inline
+    LargeInt<Int_t>& operator+=(const Int_t another)
+    {
+      *this += LargeInt<Int_t>(another);
+      return *this;
+    }
 
     /**
      * 加算
      * @param another 足す数
      * @return 加算結果
      */
+    inline
     LargeInt<Int_t> operator+(const LargeInt<Int_t>& another)
     const
     {
@@ -323,6 +355,7 @@ public:
      * @param another  足す数
      * @return 自分自身
      */
+    inline
     LargeInt<Int_t>& operator+=(const LargeInt<Int_t>& another)
     {
       auto result = add_control(another);
@@ -331,31 +364,7 @@ public:
       return *this;
     }
 
-    /**
-     * 減算
-     * @param another 引く数
-     * @return 減算結果
-     */
-    LargeInt<Int_t> operator-(const Int_t another)
-    {
-      LargeInt<Int_t> result = *this;
-      //sub_int_impl(another, &result);
-      return result;
-    }
-
-    /**
-     * 減算代入
-     * @param another  引く数
-     * @return 自分自身
-     */
-    LargeInt<Int_t>& operator-=(const Int_t another)
-    {
-      //sub_int_impl(another, this);
-      return *this;
-    }
-
-private:
-    inline
+  private:
     LargeInt<Int_t> sub_control(const LargeInt<Int_t>& another)
     const
     {
@@ -391,12 +400,37 @@ private:
       return result;
     }
 
-public:
+  public:
     /**
      * 減算
      * @param another 引く数
      * @return 減算結果
      */
+    inline
+    LargeInt<Int_t> operator-(const Int_t another)
+    const
+    {
+      return (*this - LargeInt<Int_t>(another));
+    }
+
+    /**
+     * 減算代入
+     * @param another  引く数
+     * @return 自分自身
+     */
+    inline
+    LargeInt<Int_t>& operator-=(const Int_t another)
+    {
+      *this -= LargeInt<Int_t>(another);
+      return *this;
+    }
+
+    /**
+     * 減算
+     * @param another 引く数
+     * @return 減算結果
+     */
+    inline
     LargeInt<Int_t> operator-(const LargeInt<Int_t>& another)
     const
     {
@@ -408,6 +442,7 @@ public:
      * @param another  引く数
      * @return 自分自身
      */
+    inline
     LargeInt<Int_t>& operator-=(const LargeInt<Int_t>& another)
     {
       auto result = sub_control(another);
@@ -587,6 +622,7 @@ public:
      * 桁を反転
      */
     LargeInt<Int_t> reverse()
+    const
     {
       check_availability();
       LargeInt<Int_t> res(0);
@@ -631,66 +667,6 @@ public:
       check_availability();
       return (num.size() - 1) * (MAX_DIGITS - 1) + std::log10(*num.rbegin()) + 1;
     }
-
-  public:  // コンストラクタ
-    /**
-     * 普通のInt_tから生成
-     * @param init 初期値
-     */
-    LargeInt(Int_t init)
-      : is_negative(init < 0),
-        failed(false)
-    {
-      num.push_back(init < 0 ? -init : init);
-    }
-
-    /**
-     * 値を表現する数値列から生成
-     * ex) 12345 -> {1,2,3,4,5}
-     * @param  vec 初期値を表す数値列
-     */
-    LargeInt(const std::initializer_list<Int_t>& vec)
-      : is_negative(false),
-        failed(false)
-    {
-      Int_t n = 0;
-      const auto size = vec.size();
-      using SizeType = typename std::remove_const<decltype(size)>::type;
-      if (size > 0) {
-        num.reserve(static_cast<SizeType>(std::log10(size) + 1) / (MAX_DIGITS - 1));
-      }
-
-      for (SizeType i = 0; i < size; i++) {
-        if (*(vec.end() - i - 1) > 9) {
-          failed = true;
-          return;
-        }
-        if ((i > 0 && i + 1 < size && i % (MAX_DIGITS - 1) == 0)) {
-          num.push_back(n);
-          n = 0;
-        }
-        n += std::pow(10, i % (MAX_DIGITS - 1)) * (*(vec.end() - i - 1));
-      }
-      num.push_back(n);
-    }
-
-    /**
-     * コピーコンストラクタ
-     */
-    LargeInt(const LargeInt<Int_t>& src)
-    noexcept
-    {
-      *this = src;
-    }
-
-    /**
-     * ムーブコンストラクタ
-     */
-    LargeInt(LargeInt<Int_t>&& src)
-    noexcept
-    {
-      *this = std::move(src);
-    }
   };
 
   /**
@@ -717,6 +693,7 @@ namespace std
    * （つまり10底log演算では全然ない）
    */
   template <typename Int_t>
+  inline
   double log10(const Euler::LargeInt<Int_t>& li)
   {
     return li.num_digits();
@@ -726,6 +703,7 @@ namespace std
    * 汎用的なLargeIntの文字列化
    */
   template <typename Int_t>
+  inline
   std::string to_string(const Euler::LargeInt<Int_t>& li)
   {
     return li.str();
@@ -736,6 +714,7 @@ namespace std
  * LargeIntをストリーム出力するための演算子オーバーロード
  */
 template <typename Int_t>
+inline
 std::ostream& operator<<(std::ostream& os, const Euler::LargeInt<Int_t>& li)
 {
   li.to_stream(os);
