@@ -129,7 +129,7 @@ namespace Euler
           dest->num.at(n) -= LIMIT_PER_TERMS;
           n++;
           if (n < size) {
-            dest->num.at(n) += 1;
+            dest->num.at(n)++;
           }
           else {
             dest->num.push_back(1);
